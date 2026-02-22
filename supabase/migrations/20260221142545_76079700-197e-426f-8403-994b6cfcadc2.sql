@@ -2,6 +2,9 @@
 -- Create enum for content types
 CREATE TYPE public.content_type AS ENUM ('poem', 'story', 'quote');
 
+-- Ensure uuid generator is available
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- Create writings table
 CREATE TABLE public.writings (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -21,15 +24,22 @@ ALTER TABLE public.writings ENABLE ROW LEVEL SECURITY;
 -- Public can read published writings
 CREATE POLICY "Anyone can read published writings"
   ON public.writings FOR SELECT
+  TO public
   USING (is_published = true);
 
--- Create admin role system
-CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+-- Create admin role system (idempotent)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'app_role') THEN
+    CREATE TYPE public.app_role AS ENUM ('admin','user');
+  END IF;
+END
+$$;
 
-CREATE TABLE public.user_roles (
+CREATE TABLE IF NOT EXISTS public.user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  role app_role NOT NULL,
+  role public.app_role NOT NULL,
   UNIQUE (user_id, role)
 );
 

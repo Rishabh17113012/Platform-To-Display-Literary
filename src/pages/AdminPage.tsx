@@ -7,7 +7,7 @@ import { Plus, Edit2, Trash2, LogOut, Eye, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const AdminPage = () => {
-  const { session, isAdmin, loading, signIn, signOut } = useAuth();
+  const { session, isAdmin, loading, roleLoading, signIn, signOut } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -17,7 +17,7 @@ const AdminPage = () => {
     title: "",
     content: "",
     type: "poem" as "poem" | "story" | "quote",
-    genre: "General",
+    genre: "",
     is_published: true,
   });
   const navigate = useNavigate();
@@ -100,11 +100,11 @@ const AdminPage = () => {
   }
 
   function resetForm() {
-    setForm({ title: "", content: "", type: "poem", genre: "General", is_published: true });
+    setForm({ title: "", content: "", type: "poem", genre: "", is_published: true });
     setEditingId(null);
   }
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-primary font-cinzel tracking-widest animate-glow-pulse">Loading...</p>

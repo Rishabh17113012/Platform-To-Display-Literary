@@ -2,15 +2,32 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Environment variables supported (in order of preference):
+// VITE_SUPABASE_URL
+// VITE_SUPABASE_PROJECT_ID -> will be converted to https://<id>.supabase.co
+// VITE_SUPABASE_PUBLISHABLE_KEY or VITE_SUPABASE_ANON_KEY
+
+const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
+const RAW_URL = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const SUPABASE_URL = RAW_URL ?? (PROJECT_ID ? `https://${PROJECT_ID}.supabase.co` : undefined);
+const SUPABASE_PUBLISHABLE_KEY = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined) ?? (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined);
+
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  // Surface a clear error during development — failing fast helps avoid silent hangs.
+  // eslint-disable-next-line no-console
+  console.error('[supabase] Missing SUPABASE URL or publishable key. Ensure VITE_SUPABASE_URL or VITE_SUPABASE_PROJECT_ID and VITE_SUPABASE_PUBLISHABLE_KEY are set.');
+  // In development throw to make the problem obvious. In production let it proceed so deploy pipelines can handle it.
+  if (import.meta.env.DEV) {
+    throw new Error('Missing Supabase configuration: VITE_SUPABASE_URL or VITE_SUPABASE_PROJECT_ID and VITE_SUPABASE_PUBLISHABLE_KEY');
+  }
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export const supabase = createClient<Database>(SUPABASE_URL ?? '', SUPABASE_PUBLISHABLE_KEY ?? '', {
   auth: {
-    storage: localStorage,
+    storage: typeof window !== 'undefined' ? localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
   }
