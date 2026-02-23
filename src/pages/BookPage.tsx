@@ -24,6 +24,14 @@ const BookPage = () => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareImageData, setShareImageData] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showPageReveal, setShowPageReveal] = useState(false);
+
+  // Trigger page reveal animation on page change
+  useEffect(() => {
+    setShowPageReveal(true);
+    const timer = setTimeout(() => setShowPageReveal(false), 300);
+    return () => clearTimeout(timer);
+  }, [currentPage]);
 
   // Resume reading
   useEffect(() => {
@@ -310,7 +318,7 @@ const BookPage = () => {
             {/* The page */}
             <div
               id="poetry-page"
-              className={`relative max-w-2xl mx-auto rounded-sm page-shadow paper-texture vignette transition-colors duration-500 ${paperClass}`}
+              className={`relative max-w-2xl mx-auto rounded-sm page-shadow paper-texture paper-vignette paper-texture-subtle paper-warm-tint vignette transition-colors duration-500 ${paperClass} ${showPageReveal ? "page-reveal-animation" : ""}`}
             >
               <div className="p-8 md:p-12 lg:p-16 min-h-[60vh] relative">
                 {/* Page Watermark - visible in all modes */}
@@ -352,16 +360,18 @@ const BookPage = () => {
                 </div>
 
                 {/* Title */}
-                <h2 className={`font-display text-2xl md:text-3xl mb-6 ${
-                  readingMode === "night" ? "text-primary" : "text-gold-dark"
-                }`}>
-                  {currentWriting.title}
-                </h2>
+                <div className="page-title-container">
+                  <h2 className={`page-title font-display text-3xl md:text-4xl mb-10 font-bold leading-tight ${
+                    readingMode === "night" ? "text-primary" : "text-gold-dark"
+                  }`}>
+                    {currentWriting.title}
+                  </h2>
+                </div>
 
                 {/* Divider */}
-                <div className={`w-20 h-px mb-8 ${
+                <div className={`h-px mb-8 transition-all duration-300 ${
                   readingMode === "night" ? "bg-primary/30" : "bg-gold-dark/20"
-                }`} />
+                }`} style={{ width: "104px" }} />
 
                 {/* Content */}
                 <div className={`font-body text-lg md:text-xl leading-relaxed whitespace-pre-line ${

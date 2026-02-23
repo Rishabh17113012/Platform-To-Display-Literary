@@ -127,3 +127,110 @@
   animation: button-create-hover 400ms ease-in-out;
 }
 
+/* 3D Book tilt effect */
+@keyframes book-tilt {
+  0% {
+    transform: perspective(1200px) rotateY(-8deg) rotateX(2deg) rotateZ(0deg);
+  }
+  50% {
+    transform: perspective(1200px) rotateY(-12deg) rotateX(4deg) rotateZ(1deg);
+  }
+  100% {
+    transform: perspective(1200px) rotateY(-8deg) rotateX(2deg) rotateZ(0deg);
+  }
+}
+
+.book-tilt-hover:hover {
+  animation: book-tilt 1.2s ease-in-out infinite;
+}
+
+/* Gold glow animation */
+@keyframes glow-gold {
+  0%, 100% {
+    box-shadow: 8px 8px 30px rgba(0,0,0,0.5), -2px 0 10px rgba(0,0,0,0.3), inset -3px 0 8px rgba(0,0,0,0.3), 0 0 20px rgba(212, 175, 55, 0);
+  }
+  50% {
+    box-shadow: 8px 8px 30px rgba(0,0,0,0.5), -2px 0 10px rgba(0,0,0,0.3), inset -3px 0 8px rgba(0,0,0,0.3), 0 0 40px rgba(212, 175, 55, 0.6);
+  }
+}
+
+.book-glow:hover {
+  animation: glow-gold 2s ease-in-out infinite;
+}
+
+/* Page reveal animation */
+@keyframes page-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0px);
+    box-shadow: 8px 8px 30px rgba(0, 0, 0, 0.3);
+  }
+}
+
+.page-reveal-animation {
+  animation: page-reveal 300ms ease-out forwards;
+}
+/* Paper vignette effect - subtle darkening at edges */
+.paper-vignette {
+  position: relative;
+}
+
+.paper-vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.025), 
+              inset 0 0 80px rgba(0, 0, 0, 0.02);
+}
+
+/* Ultra-light paper texture noise */
+.paper-texture-subtle {
+  background-image: 
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" result="noise" seed="2" /><feColorMatrix in="noise" type="saturate" values="0"/></filter><rect width="400" height="400" filter="url(%23noise)" opacity="0.03"/></svg>'),
+    linear-gradient(to bottom, transparent, transparent);
+  background-size: 400px 400px, 100% 100%;
+  background-attachment: fixed, scroll;
+}
+
+/* Warm tint overlay */
+.paper-warm-tint::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 250, 240, 0.15), rgba(255, 245, 230, 0.1));
+  border-radius: inherit;
+}
+
+/* Title styling with authority */
+.page-title {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: all 300ms ease;
+  position: relative;
+}
+
+.page-title::after {
+  content: '';
+  position: absolute;
+  bottom: -12px;
+  left: 0;
+  width: 26px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.6;
+  transition: all 300ms ease;
+}
+
+.page-title-container:hover .page-title::after {
+  width: 34px;
+  opacity: 1;
+  filter: drop-shadow(0 0 8px rgba(212, 175, 55, 0.4));
+}

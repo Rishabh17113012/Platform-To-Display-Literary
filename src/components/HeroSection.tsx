@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Sparkles } from "lucide-react";
+import { BookOpen, Sparkles, Volume2, VolumeX } from "lucide-react";
+import { useState } from "react";
 
 const GoldenFeather = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -53,8 +54,35 @@ const Particles = () => (
   </div>
 );
 
+
 const HeroSection = () => {
   const navigate = useNavigate();
+  const [soundEnabled, setSoundEnabled] = useState(false);
+
+  const playPageFlipSound = () => {
+    if (!soundEnabled) return;
+    // Create a simple page-flip sound effect
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const now = audioContext.currentTime;
+    
+    // Create oscillator for page-flip sound
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    // Frequency sweep from high to low
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.15);
+    
+    // Gain envelope
+    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+    
+    osc.start(now);
+    osc.stop(now + 0.15);
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden grain-overlay">
@@ -78,11 +106,19 @@ const HeroSection = () => {
           </p>
         </div>
 
-        {/* 3D Book */}
+        {/* Tagline */}
+        <p className="font-body text-sm md:text-base text-foreground/70 max-w-2xl mx-auto leading-relaxed tracking-wide">
+          Read original Hindi poems, stories, and reflections.
+        </p>
+
+        {/* 3D Book with enhanced interactions */}
         <div
-          className="animate-fade-up cursor-pointer group"
+          className="animate-fade-up cursor-pointer group book-tilt-hover book-glow"
           style={{ animationDelay: "0.5s", perspective: "1200px" }}
-          onClick={() => navigate("/book")}
+          onClick={() => {
+            playPageFlipSound();
+            navigate("/book");
+          }}
         >
           <div className="relative animate-float" style={{ transformStyle: "preserve-3d" }}>
             {/* Book body */}
@@ -139,17 +175,37 @@ const HeroSection = () => {
           </div>
         </div>
 
-        {/* CTA */}
+        {/* CTA with Sound Toggle */}
         <div className="flex flex-col items-center gap-4 animate-fade-up" style={{ animationDelay: "0.8s" }}>
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+            <button
+              onClick={() => navigate("/book")}
+              onMouseEnter={playPageFlipSound}
+              className="flex items-center gap-3 px-8 py-3 gold-gradient text-primary-foreground font-cinzel tracking-widest text-sm rounded-sm transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/20"
+            >
+              <BookOpen size={18} />
+              Open the Book
+            </button>
+            
+            {/* Sound Toggle Button */}
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className="flex items-center justify-center w-10 h-10 rounded-sm border border-primary/30 text-muted-foreground hover:text-primary hover:border-primary/60 transition-all duration-300 group"
+              title={soundEnabled ? "Sound enabled" : "Sound disabled"}
+            >
+              {soundEnabled ? (
+                <Volume2 size={16} className="group-hover:scale-110 transition-transform" />
+              ) : (
+                <VolumeX size={16} className="group-hover:scale-110 transition-transform" />
+              )}
+            </button>
+          </div>
+          
           <button
-            onClick={() => navigate("/book")}
-            className="flex items-center gap-3 px-8 py-3 gold-gradient text-primary-foreground font-cinzel tracking-widest text-sm rounded-sm transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/20"
-          >
-            <BookOpen size={18} />
-            Open the Book
-          </button>
-          <button
-            onClick={() => navigate("/book?random=true")}
+            onClick={() => {
+              playPageFlipSound();
+              navigate("/book?random=true");
+            }}
             className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-body text-sm tracking-wide"
           >
             <Sparkles size={14} />
