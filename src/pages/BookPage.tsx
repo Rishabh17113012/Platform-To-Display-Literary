@@ -177,23 +177,31 @@ const BookPage = () => {
             <div
               className={`relative max-w-2xl mx-auto rounded-sm page-shadow paper-texture vignette transition-colors duration-500 ${paperClass}`}
             >
-              <div className="p-8 md:p-12 lg:p-16 min-h-[60vh]">
-                {/* Bookmark */}
-                <button
-                  onClick={() => toggleBookmark(currentWriting.id)}
-                  className="absolute top-4 right-4 transition-colors"
-                  title={bookmarks.includes(currentWriting.id) ? "Remove bookmark" : "Add bookmark"}
-                >
-                  <Bookmark
-                    size={20}
-                    className={bookmarks.includes(currentWriting.id)
-                      ? "fill-primary text-primary"
-                      : readingMode === "night" ? "text-gold-muted" : "text-gold-dark/30"
-                    }
-                  />
-                </button>
+              <div className="p-8 md:p-12 lg:p-16 min-h-[60vh] relative">
+                {/* Page Watermark - visible in all modes */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                  <div className="text-6xl md:text-7xl font-cinzel font-bold text-center" style={{
+                    transform: 'rotate(-45deg)',
+                    color: readingMode === 'night' ? '#d4af37' : readingMode === 'sepia' ? '#8B6F47' : '#9B8B7A',
+                    opacity: readingMode === 'night' ? 0.08 : 0.12,
+                    whiteSpace: 'nowrap',
+                    letterSpacing: '0.2em',
+                    mixBlendMode: readingMode === 'night' ? 'screen' : 'multiply',
+                    textShadow: readingMode === 'night' ? 'none' : '0 0 1px rgba(0,0,0,0.1)'
+                  }}>
+                    HR Ki Duniya
+                  </div>
+                </div>
 
-                {/* Type badge */}
+                {/* Bookmark Ribbon */}
+                <div
+                  onClick={() => toggleBookmark(currentWriting.id)}
+                  className={`bookmark-ribbon ${bookmarks.includes(currentWriting.id) ? "active" : ""}`}
+                  title={bookmarks.includes(currentWriting.id) ? "Remove bookmark" : "Add bookmark"}
+                />
+
+                {/* Content */}
+                <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-6">
                   <span className={`text-xs font-body tracking-[0.2em] uppercase ${
                     readingMode === "night" ? "text-primary/60" : "text-gold-dark/60"
@@ -232,6 +240,7 @@ const BookPage = () => {
                   readingMode === "night" ? "text-primary/30" : "text-gold-dark/20"
                 }`}>
                   ✦
+                </div>
                 </div>
               </div>
 

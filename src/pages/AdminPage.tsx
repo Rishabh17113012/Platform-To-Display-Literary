@@ -22,6 +22,30 @@ const AdminPage = () => {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [readingMode, setReadingMode] = useState<"ivory" | "night" | "sepia">("ivory");
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 6;
+
+  // Validation helpers
+  const isTitleEmpty = !form.title.trim();
+  const isContentEmpty = !form.content.trim();
+  const canSave = !isTitleEmpty && !isContentEmpty;
+
+  // Pagination logic
+  const totalPages = Math.ceil(writings.length / itemsPerPage);
+  const startIdx = currentPage * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedWritings = writings.slice(startIdx, endIdx);
+
+  // Auto-capitalize genre on change
+  const handleGenreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const capitalized = value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+    setForm({ ...form, genre: capitalized });
+  };
+
+  // CSS class selection for reading mode
+  const paperClass = readingMode === "ivory" ? "paper-ivory" : readingMode === "sepia" ? "paper-sepia" : "paper-night";
 
   useEffect(() => {
     if (isAdmin) fetchWritings();
@@ -32,7 +56,10 @@ const AdminPage = () => {
       .from("writings")
       .select("*")
       .order("created_at", { ascending: false });
-    if (data) setWritings(data);
+    if (data) {
+      setWritings(data);
+      setCurrentPage(0); // Reset to first page when fetching
+    }
   }
 
   async function handleLogin(e: React.FormEvent) {
@@ -102,6 +129,7 @@ const AdminPage = () => {
   function resetForm() {
     setForm({ title: "", content: "", type: "poem", genre: "", is_published: true });
     setEditingId(null);
+    setCurrentPage(0); // Reset pagination when starting new entry
   }
 
   if (loading || roleLoading) {
@@ -197,115 +225,286 @@ const AdminPage = () => {
         </button>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
-        {/* Form */}
-        <div className="bg-card border border-border rounded-sm p-6 space-y-4">
-          <h2 className="font-display text-lg text-primary">
+      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+        {/* Form Header */}
+        <div>
+          <h2 className="font-display text-lg text-primary mb-4">
             {editingId ? "Edit Writing" : "Add New Writing"}
           </h2>
+        </div>
 
-          <input
-            placeholder="Title"
-            value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
-            className="w-full bg-secondary border border-border rounded-sm px-4 py-3 font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
-          />
-
-          <div className="flex gap-4">
-            <select
-              value={form.type}
-              onChange={(e) => setForm({ ...form, type: e.target.value as any })}
-              className="bg-secondary border border-border rounded-sm px-4 py-3 font-body text-foreground focus:outline-none focus:border-primary/50"
-            >
-              <option value="poem">Poem (कविता)</option>
-              <option value="story">Story (कहानी)</option>
-              <option value="quote">Quote (विचार)</option>
-            </select>
-
+        {/* Meta fields */}
+        <div className="bg-card border border-border rounded-sm p-6 space-y-4 form-container-refined">
+          <div>
+            <label className="block text-xs font-body text-muted-foreground mb-2">Title *</label>
             <input
-              placeholder="Genre"
-              value={form.genre}
-              onChange={(e) => setForm({ ...form, genre: e.target.value })}
-              className="flex-1 bg-secondary border border-border rounded-sm px-4 py-3 font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+              placeholder="Enter title"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className={`w-full bg-secondary border rounded-sm px-4 py-3 font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors ${
+                isTitleEmpty ? "border-destructive/50" : "border-border"
+              }`}
             />
+            {isTitleEmpty && (
+              <p className="text-xs text-destructive mt-1">Title is required</p>
+            )}
           </div>
 
-          <textarea
-            placeholder="Content (supports line breaks)"
-            value={form.content}
-            onChange={(e) => setForm({ ...form, content: e.target.value })}
-            rows={10}
-            className="w-full bg-secondary border border-border rounded-sm px-4 py-3 font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 resize-y"
-          />
-
-          <label className="flex items-center gap-2 font-body text-sm text-foreground/70">
-            <input
-              type="checkbox"
-              checked={form.is_published}
-              onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
-              className="accent-primary"
-            />
-            Published
-          </label>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleSave}
-              className="gold-gradient text-primary-foreground font-cinzel tracking-wider px-6 py-2 rounded-sm hover:opacity-90 transition-opacity text-sm"
-            >
-              {editingId ? "Update" : "Create"}
-            </button>
-            {editingId && (
-              <button
-                onClick={resetForm}
-                className="border border-border text-muted-foreground px-6 py-2 rounded-sm hover:text-foreground transition-colors font-body text-sm"
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="block text-xs font-body text-muted-foreground mb-2">Type</label>
+              <select
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value as any })}
+                className="w-full bg-secondary border border-border rounded-sm px-4 py-3 font-body text-foreground focus:outline-none focus:border-primary/50"
               >
-                Cancel
+                <option value="poem">Poem (कविता)</option>
+                <option value="story">Story (कहानी)</option>
+                <option value="quote">Quote (विचार)</option>
+              </select>
+            </div>
+
+            <div className="flex-1">
+              <label className="block text-xs font-body text-muted-foreground mb-2">Genre</label>
+              <input
+                placeholder="e.g., Romance, Philosophy"
+                value={form.genre}
+                onChange={handleGenreChange}
+                className="w-full bg-secondary border border-border rounded-sm px-4 py-3 font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 pt-2">
+            <label className="flex items-center gap-2 font-body text-sm text-foreground/70">
+              <input
+                type="checkbox"
+                checked={form.is_published}
+                onChange={(e) => setForm({ ...form, is_published: e.target.checked })}
+                className="accent-primary"
+              />
+              Published
+            </label>
+          </div>
+        </div>
+
+        {/* Split Editor & Preview */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Editor */}
+          <div className="bg-card border border-border rounded-sm p-6 space-y-4 form-container-refined">
+            <div>
+              <label className="block text-xs font-body text-muted-foreground mb-2">Content * (Live preview On)</label>
+              <textarea
+                placeholder="Enter content (supports line breaks)"
+                value={form.content}
+                onChange={(e) => setForm({ ...form, content: e.target.value })}
+                rows={18}
+                className={`w-full bg-secondary border rounded-sm px-4 py-3 font-body text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 transition-colors resize-y textarea-parchment ${
+                  isContentEmpty ? "border-destructive/50" : "border-border"
+                }`}
+              />
+              {isContentEmpty && (
+                <p className="text-xs text-destructive mt-1">Content is required</p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleSave}
+                disabled={!canSave}
+                className="gold-button-refined create-button-animated text-primary-foreground font-cinzel tracking-wider px-6 py-2 rounded-sm text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {editingId ? "Update" : "Create"}
               </button>
-            )}
+              {editingId && (
+                <button
+                  onClick={resetForm}
+                  className="border border-border text-muted-foreground px-6 py-2 rounded-sm hover:text-foreground transition-colors font-body text-sm"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="space-y-4">
+            <div className="bg-card border border-border rounded-sm p-4 form-container-refined">
+              <div className="flex items-center justify-between mb-4">
+                <label className="text-xs font-body text-muted-foreground">Preview (Book Page)</label>
+                <div className="flex gap-2">
+                  {(["ivory", "sepia", "night"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setReadingMode(mode)}
+                      className={`px-2 py-1 text-xs rounded font-body transition-colors ${
+                        readingMode === mode
+                          ? "gold-gradient text-primary-foreground"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live Preview */}
+              <div
+                className={`relative rounded-sm page-shadow paper-texture vignette transition-colors duration-500 ${paperClass} p-8 min-h-[80vh] max-h-[80vh] overflow-y-auto`}
+              >
+                {/* Type badge */}
+                <div className="flex items-center gap-2 mb-6">
+                  <span className={`text-xs font-body tracking-[0.2em] uppercase ${
+                    readingMode === "night" ? "text-primary/60" : "text-gold-dark/60"
+                  }`}>
+                    {form.type === "poem" ? "कविता" : form.type === "story" ? "कहानी" : "विचार"}
+                  </span>
+                  <span className={`text-xs ${readingMode === "night" ? "text-primary/30" : "text-gold-dark/20"}`}>•</span>
+                  <span className={`text-xs font-body tracking-wider ${
+                    readingMode === "night" ? "text-primary/40" : "text-gold-dark/40"
+                  }`}>
+                    {form.genre || "Genre"}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <h2 className={`font-display text-2xl md:text-3xl mb-6 ${
+                  readingMode === "night" ? "text-primary" : "text-gold-dark"
+                }`}>
+                  {form.title || "(Title)"}
+                </h2>
+
+                {/* Divider */}
+                <div className={`w-20 h-px mb-8 ${
+                  readingMode === "night" ? "bg-primary/30" : "bg-gold-dark/20"
+                }`} />
+
+                {/* Content */}
+                <div className={`font-body text-lg md:text-xl leading-relaxed whitespace-pre-line ${
+                  readingMode === "night" ? "text-foreground/80" : ""
+                }`}>
+                  {form.content || "(Content preview)"}
+                </div>
+
+                {/* Bottom ornament */}
+                <div className={`text-center mt-12 text-xl ${
+                  readingMode === "night" ? "text-primary/30" : "text-gold-dark/20"
+                }`}>
+                  ✦
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Writings list */}
-        <div className="space-y-3">
-          <h2 className="font-display text-lg text-primary">All Writings ({writings.length})</h2>
-          {writings.map((w) => (
-            <div
-              key={w.id}
-              className="bg-card border border-border rounded-sm p-4 flex items-start justify-between gap-4"
-            >
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-display text-base text-foreground truncate">{w.title}</h3>
-                  {!w.is_published && (
-                    <span className="text-xs bg-secondary text-muted-foreground px-2 py-0.5 rounded-sm">
-                      Draft
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground font-body">
-                  {w.type} • {w.genre} • {new Date(w.created_at).toLocaleDateString()}
-                </p>
-                <p className="text-sm text-foreground/50 font-body mt-1 line-clamp-2">
-                  {w.content}
-                </p>
-              </div>
-              <div className="flex gap-2 shrink-0">
-                <button
-                  onClick={() => editWriting(w)}
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <Edit2 size={16} />
-                </button>
-                <button
-                  onClick={() => handleDelete(w.id)}
-                  className="text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 className="font-display text-lg text-primary">All Writings ({writings.length})</h2>
+            <div className="text-xs text-muted-foreground font-body">
+              Showing {writings.length === 0 ? 0 : startIdx + 1}–{Math.min(endIdx, writings.length)} of {writings.length}
             </div>
-          ))}
+          </div>
+
+          {/* Writings cards grid - optimized for mobile */}
+          <div className="space-y-3 md:grid md:grid-cols-1 lg:grid-cols-1 md:gap-4">
+            {paginatedWritings.length > 0 ? (
+              paginatedWritings.map((w) => (
+                <div
+                  key={w.id}
+                  className="bg-card border border-border rounded-sm p-4 md:p-5 flex flex-col sm:flex-row sm:items-start gap-4 hover:border-primary/30 transition-colors"
+                >
+                  {/* Content */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <h3 className="font-display text-base md:text-lg text-foreground line-clamp-1">{w.title}</h3>
+                      {!w.is_published && (
+                        <span className="text-xs bg-secondary text-muted-foreground px-2 py-0.5 rounded-sm whitespace-nowrap">
+                          Draft
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs md:text-sm text-muted-foreground font-body mb-2">
+                      {w.type} • {w.genre || "—"} • {new Date(w.created_at).toLocaleDateString()}
+                    </p>
+                    <p className="text-sm text-foreground/60 font-body line-clamp-2 md:line-clamp-3">
+                      {w.content}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 sm:gap-3 shrink-0 w-full sm:w-auto justify-end">
+                    <button
+                      onClick={() => editWriting(w)}
+                      title="Edit"
+                      className="p-2 text-muted-foreground hover:text-primary transition-colors rounded-sm hover:bg-secondary"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(w.id)}
+                      title="Delete"
+                      className="p-2 text-muted-foreground hover:text-destructive transition-colors rounded-sm hover:bg-secondary"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <p>No writings yet. Create one to get started!</p>
+              </div>
+            )}
+          </div>
+
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-border">
+              <button
+                onClick={() => {
+                  setCurrentPage(Math.max(0, currentPage - 1));
+                  window.scrollTo({ top: 400, behavior: "smooth" });
+                }}
+                disabled={currentPage === 0}
+                className="w-full sm:w-auto px-6 py-2 border border-border text-muted-foreground font-body text-sm rounded-sm hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                ← Previous
+              </button>
+
+              <div className="flex items-center gap-2">
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setCurrentPage(i);
+                      window.scrollTo({ top: 400, behavior: "smooth" });
+                    }}
+                    className={`w-8 h-8 rounded-sm font-body text-sm transition-colors ${
+                      currentPage === i
+                        ? "gold-gradient text-primary-foreground"
+                        : "border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => {
+                  setCurrentPage(Math.min(totalPages - 1, currentPage + 1));
+                  window.scrollTo({ top: 400, behavior: "smooth" });
+                }}
+                disabled={currentPage === totalPages - 1}
+                className="w-full sm:w-auto px-6 py-2 border border-border text-muted-foreground font-body text-sm rounded-sm hover:text-foreground hover:border-primary/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
