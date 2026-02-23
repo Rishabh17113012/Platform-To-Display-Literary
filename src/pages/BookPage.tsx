@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Bookmark, BookOpen, Sun, Moon, ScrollText, Shuffle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Bookmark, BookOpen, Sun, Moon, ScrollText, Shuffle, Download, Share2 } from "lucide-react";
 import { useWritings, Writing } from "@/hooks/useWritings";
 import Navbar from "@/components/Navbar";
+import html2canvas from "html2canvas";
 
 type ReadingMode = "ivory" | "night" | "sepia";
 
@@ -46,6 +47,22 @@ const BookPage = () => {
     localStorage.setItem("hr-bookmarks", JSON.stringify(bookmarks));
   }, [bookmarks]);
 
+  // Arrow key navigation
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (writings.length === 0) return;
+      
+      if (e.key === "ArrowRight") {
+        setCurrentPage((prev) => Math.min(writings.length - 1, prev + 1));
+      } else if (e.key === "ArrowLeft") {
+        setCurrentPage((prev) => Math.max(0, prev - 1));
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
+  }, [writings.length]);
+
   const currentWriting = writings[currentPage];
 
   const toggleBookmark = (id: string) => {
@@ -61,6 +78,31 @@ const BookPage = () => {
         next = Math.floor(Math.random() * writings.length);
       }
       setCurrentPage(next);
+    }
+  };
+
+  // Share as image
+  const shareAsImage = async () => {
+    const pageElement = document.getElementById("poetry-page");
+    if (!pageElement) return;
+
+    try {
+      const canvas = await html2canvas(pageElement, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        logging: false,
+        useCORS: true,
+      });
+
+      // Download as image
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = `${currentWriting?.title || "poetry"}-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Error generating image:", error);
     }
   };
 
@@ -175,6 +217,7 @@ const BookPage = () => {
           <div className="relative">
             {/* The page */}
             <div
+              id="poetry-page"
               className={`relative max-w-2xl mx-auto rounded-sm page-shadow paper-texture vignette transition-colors duration-500 ${paperClass}`}
             >
               <div className="p-8 md:p-12 lg:p-16 min-h-[60vh] relative">
@@ -263,6 +306,13 @@ const BookPage = () => {
                 Previous
               </button>
               <button
+                onClick={shareAsImage}
+                className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-primary transition-colors font-body text-sm"
+              >
+                <Share2 size={16} />
+                Share
+              </button>
+              <button
                 onClick={() => setCurrentPage(Math.min(writings.length - 1, currentPage + 1))}
                 disabled={currentPage === writings.length - 1}
                 className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-primary disabled:opacity-20 disabled:hover:text-muted-foreground transition-colors font-body text-sm"
@@ -270,6 +320,13 @@ const BookPage = () => {
                 Next
                 <ChevronRight size={16} />
               </button>
+            </div>
+
+            {/* Keyboard hint */}
+            <div className="text-center max-w-2xl mx-auto mt-4">
+              <p className="text-xs text-muted-foreground/60 font-body tracking-wider">
+                Use ← → arrow keys to navigate
+              </p>
             </div>
           </div>
         ) : null}
