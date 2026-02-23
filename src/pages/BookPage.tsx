@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Bookmark, BookOpen, Sun, Moon, ScrollText, Shuffle, Download, Share2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Bookmark, BookOpen, Sun, Moon, ScrollText, Shuffle, Download, Share2, X, Copy, Share } from "lucide-react";
 import { useWritings, Writing } from "@/hooks/useWritings";
 import Navbar from "@/components/Navbar";
 import html2canvas from "html2canvas";
@@ -21,6 +21,9 @@ const BookPage = () => {
     const saved = localStorage.getItem("hr-bookmarks");
     return saved ? JSON.parse(saved) : [];
   });
+  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [shareImageData, setShareImageData] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Resume reading
   useEffect(() => {
@@ -81,28 +84,117 @@ const BookPage = () => {
     }
   };
 
-  // Share as image
-  const shareAsImage = async () => {
+  // Generate image for sharing
+  const generateShareImage = async () => {
     const pageElement = document.getElementById("poetry-page");
-    if (!pageElement) return;
+    if (!pageElement) return null;
 
     try {
+      const bgColorMap: Record<ReadingMode, string> = {
+        ivory: "#FBF7F3",
+        night: "#0a0a0a",
+        sepia: "#f4ede4",
+      };
+
       const canvas = await html2canvas(pageElement, {
-        backgroundColor: "#ffffff",
+        backgroundColor: bgColorMap[readingMode],
         scale: 2,
         logging: false,
         useCORS: true,
+        allowTaint: true,
+        proxy: undefined,
       });
 
-      // Download as image
+      return canvas.toDataURL("image/png");
+    } catch (error) {
+      console.error("Error generating image:", error);
+      return null;
+    }
+  };
+
+  // Open share menu with preview
+  const handleShareClick = async () => {
+    if (!showShareMenu && !shareImageData) {
+      const imageData = await generateShareImage();
+      if (imageData) {
+        setShareImageData(imageData);
+        setShowPreview(true);
+        setShowShareMenu(true);
+      } else {
+        alert("Failed to generate image. Please try again.");
+      }
+    } else {
+      setShowShareMenu(!showShareMenu);
+    }
+  };
+
+  // Download as PNG
+  const downloadImage = () => {
+    if (!shareImageData) return;
+    try {
       const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
+      link.href = shareImageData;
       link.download = `${currentWriting?.title || "poetry"}-${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      setShowShareMenu(false);
     } catch (error) {
-      console.error("Error generating image:", error);
+      console.error("Error downloading image:", error);
+      alert("Failed to download image.");
+    }
+  };
+
+  // Copy image to clipboard
+  const copyToClipboard = async () => {
+    if (!shareImageData) return;
+    try {
+      const blob = await fetch(shareImageData).then((res) => res.blob());
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob }),
+      ]);
+      alert("Image copied to clipboard!");
+      setShowShareMenu(false);
+    } catch (error) {
+      console.error("Error copying to clipboard:", error);
+      alert("Failed to copy image. Your browser may not support this feature.");
+    }
+  };
+
+  // Share via Web Share API
+  const shareViaWeb = async () => {
+    if (!shareImageData) return;
+    try {
+      const blob = await fetch(shareImageData).then((res) => res.blob());
+      const file = new File([blob], `${currentWriting?.title || "poetry"}.png`, {
+        type: "image/png",
+      });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: currentWriting?.title || "Poetry",
+          text: `Check out this beautiful writing: ${currentWriting?.title}`,
+          files: [file],
+        });
+        setShowShareMenu(false);
+      } else {
+        alert("Web Share API not supported on this device.");
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError") {
+        console.error("Error sharing:", error);
+      }
+    }
+  };
+
+  // Share as image
+  const shareAsImage = async () => {
+    const imageData = await generateShareImage();
+    if (imageData) {
+      setShareImageData(imageData);
+      setShowPreview(true);
+    } else {
+      alert("Failed to generate image. Please try again.");
     }
   };
 
@@ -296,7 +388,7 @@ const BookPage = () => {
             </div>
 
             {/* Navigation */}
-            <div className="flex items-center justify-between max-w-2xl mx-auto mt-6">
+            <div className="flex items-center justify-between max-w-2xl mx-auto mt-6 relative">
               <button
                 onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
                 disabled={currentPage === 0}
@@ -305,13 +397,50 @@ const BookPage = () => {
                 <ChevronLeft size={16} />
                 Previous
               </button>
-              <button
-                onClick={shareAsImage}
-                className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-primary transition-colors font-body text-sm"
-              >
-                <Share2 size={16} />
-                Share
-              </button>
+              <div className="relative">
+                <button
+                  onClick={handleShareClick}
+                  className="flex items-center gap-2 px-4 py-2 text-muted-foreground hover:text-primary transition-colors font-body text-sm"
+                >
+                  <Share2 size={16} />
+                  Share
+                </button>
+
+                {/* Share menu dropdown */}
+                {showShareMenu && shareImageData && (
+                  <div className="absolute bottom-full mb-2 right-0 bg-secondary border border-border rounded-sm shadow-lg z-50 overflow-hidden">
+                    <button
+                      onClick={() => setShowPreview(true)}
+                      className="w-full text-left px-4 py-2.5 text-sm font-body text-foreground hover:bg-accent transition-colors flex items-center gap-2 border-b border-border"
+                    >
+                      <span>Preview</span>
+                    </button>
+                    <button
+                      onClick={downloadImage}
+                      className="w-full text-left px-4 py-2.5 text-sm font-body text-foreground hover:bg-accent transition-colors flex items-center gap-2 border-b border-border"
+                    >
+                      <Download size={14} />
+                      Download PNG
+                    </button>
+                    <button
+                      onClick={copyToClipboard}
+                      className="w-full text-left px-4 py-2.5 text-sm font-body text-foreground hover:bg-accent transition-colors flex items-center gap-2 border-b border-border"
+                    >
+                      <Copy size={14} />
+                      Copy to Clipboard
+                    </button>
+                    {navigator.canShare && (
+                      <button
+                        onClick={shareViaWeb}
+                        className="w-full text-left px-4 py-2.5 text-sm font-body text-foreground hover:bg-accent transition-colors flex items-center gap-2"
+                      >
+                        <Share size={14} />
+                        Share to Apps
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
               <button
                 onClick={() => setCurrentPage(Math.min(writings.length - 1, currentPage + 1))}
                 disabled={currentPage === writings.length - 1}
@@ -322,12 +451,63 @@ const BookPage = () => {
               </button>
             </div>
 
-            {/* Keyboard hint */}
-            <div className="text-center max-w-2xl mx-auto mt-4">
-              <p className="text-xs text-muted-foreground/60 font-body tracking-wider">
-                Use ← → arrow keys to navigate
-              </p>
-            </div>
+            {/* Preview Modal */}
+            {showPreview && shareImageData && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                <div className="bg-secondary rounded-sm shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-border">
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-6 border-b border-border sticky top-0 bg-secondary">
+                    <h3 className="font-cinzel text-lg text-foreground">Preview</h3>
+                    <button
+                      onClick={() => setShowPreview(false)}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {/* Preview Image */}
+                  <div className="p-6 flex justify-center bg-background">
+                    <img
+                      src={shareImageData}
+                      alt="Share preview"
+                      className="rounded-sm max-w-full h-auto shadow-lg"
+                    />
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 p-6 border-t border-border sticky bottom-0 bg-secondary ">
+                    <button
+  onClick={downloadImage}
+  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 
+  bg-white text-black rounded-sm font-body text-sm 
+  hover:bg-gray-100 hover:shadow-lg transition-all duration-200"
+>
+  <Download size={16} />
+  Download
+</button>
+                    <button
+                      onClick={copyToClipboard}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-border rounded-sm font-body text-sm text-foreground hover:bg-accent transition-colors"
+                    >
+                      <Copy size={16} />
+                      Copy
+                    </button>
+                    {navigator.canShare && (
+                      <button
+                        onClick={shareViaWeb}
+                        className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-border rounded-sm font-body text-sm text-foreground hover:bg-accent transition-colors"
+                      >
+                        <Share size={16} />
+                        Share
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+
           </div>
         ) : null}
       </div>
